@@ -7,7 +7,7 @@ __pycache__/
 node_modules
 **/data/*
 /dist
-
+env.js
 # C extensions
 *.so
 RememberWorkPatternV2.json
