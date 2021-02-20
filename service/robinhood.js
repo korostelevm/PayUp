@@ -1,4 +1,5 @@
 const rax = require('retry-axios');
+const moment = require('moment');
 var axios = require('axios')
 const qs = require('qs');
 var utils =  require('./utils');
@@ -197,21 +198,44 @@ class Robinhood {
         return res
     }
 
+    
     async *watch_crypto(symbol){
         var holdings = await this.crypto_holdings()
         var holding = holdings.filter(c=>{return c.currency.code == symbol})[0]
         var quote0 = await this.crypto_quote(symbol)
-        holding.value0 = holding.quantity_available * quote0.ask_price
+        holding.value0 = holding.quantity_available * quote0.mark_price
         while(true){
-            await utils.sleep(1000)
+            await utils.sleep(500)
             var quote = await this.crypto_quote(symbol)
-            var new_value = holding.quantity_available * quote.ask_price
+            var new_value = holding.quantity_available * quote.mark_price
             quote.delta = new_value - holding.value0
-            quote.delta_percent = (quote.delta /  holding.value0 )*100
+            quote.delta_percent =  (quote.delta /  holding.value0 )*100 
+            quote.date = moment().format()
             yield quote
         }
     }
 
+
+    async order(params){
+        var robinhood = await client()
+        var crypto_id = this.currency_pairs.filter(c=>{return c.asset_currency.code == params.symbol})[0].id
+        try{
+            var res =( await robinhood.nummus.post('orders/',{
+                account_id: robinhood.account.id,
+                currency_pair_id: crypto_id,
+                price: params.price.toString(),
+                quantity: params.quantity.toString(),
+                ref_id: uuidv4(),
+                side: params.side,
+                time_in_force: "gtc",
+                type: "market",
+            })).data
+        }
+        catch(e){
+            console.log(e.response.data)
+        }
+        return res
+    }
   }
 
 
