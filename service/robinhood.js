@@ -1,7 +1,15 @@
 const rax = require('retry-axios');
 var axios = require('axios')
 const qs = require('qs');
-const auth = async function () {
+function uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  
+const client = async function () {
     try {
         var res = await axios({
             // httpsAgent: agent,
@@ -20,38 +28,110 @@ const auth = async function () {
                 'Content-Type': 'application/json',
             }
         })
-        return res.data
+   
     } catch (e) {
         console.error(e.config)
         console.error(e.response.data)
         throw e
     }
+
+    var api = axios.create({
+        baseURL: `https://api.robinhood.com/`,
+        timeout: 30000,
+        headers: {
+          'Authorization': `Bearer ${res.data.access_token}`,
+        }
+      });
+
+    var nummus = axios.create({
+        baseURL: `https://nummus.robinhood.com/`,
+        timeout: 30000,
+        headers: {
+          'Authorization': `Bearer ${res.data.access_token}`,
+        }
+      });
+    var account = (await nummus.get(`accounts/`)).data.results[0]
+    return {api,nummus,account }
 }
 
 var quote = async function(symbol){
-    var a = await auth()
+    var robinhood = await client()
+    try{
+        var res = (await robinhood.api.get(`quotes/?symbols=${symbol}`)).data.results
+    }catch(e){
+        console.log(e.config)
+        console.error(e.response.data)
+    }
+    return res
 
-    // Request URL: https://nummus.robinhood.com/currency_pairs/
-    var res = (await axios.get('https://nummus.robinhood.com/currency_pairs/')).data.results
-
-    // const robinhood = axios.create({
-    //     baseURL: `https://api.robinhood.com/`,
-    //     timeout: 30000,
-    //     headers: {
-    //       'Authorization': `Bearer ${a.access_token}`,
-    //     }
-    //   });
-    //   try{
-    //       var res = (await robinhood.get(`quotes/?symbols=${symbol}`)).data.results
-    //   }catch(e){
-    //       console.log(e.config)
-    //       console.error(e.response.data)
-    //   }
+}
+var crypto = async function(symbol){
+    var robinhood = await client()
+    var currency_pairs = (await axios.get('https://nummus.robinhood.com/currency_pairs/')).data.results
+    console.log(currency_pairs)
+    var crypto_id = currency_pairs.filter(c=>{return c.asset_currency.code == symbol})[0].id
+    var res = (await robinhood.api.get(`marketdata/forex/quotes/${crypto_id}/`)).data
       return res
+}
+
+var sell = async function(symbol){
+    var robinhood = await client()
+    
+    var currency_pairs = (await axios.get('https://nummus.robinhood.com/currency_pairs/')).data.results
+    var crypto_id = currency_pairs.filter(c=>{return c.asset_currency.code == symbol})[0].id
+
+    try{
+        var res =( await robinhood.nummus.post('orders/',{
+            account_id: robinhood.account.id,
+            currency_pair_id: crypto_id,
+            price: "0.055",
+            quantity: "10",
+            ref_id: uuidv4(),
+            side: "sell",
+            time_in_force: "gtc",
+            type: "market",
+        })).data
+    }
+    catch(e){
+        console.log(e.response.data)
+    }
+
+
+    return res
+
+}
+
+var buy = async function(symbol){
+    var robinhood = await client()
+    
+    var currency_pairs = (await axios.get('https://nummus.robinhood.com/currency_pairs/')).data.results
+    var crypto_id = currency_pairs.filter(c=>{return c.asset_currency.code == symbol})[0].id
+
+    try{
+        var res =( await robinhood.nummus.post('orders/',{
+            account_id: robinhood.account.id,
+            currency_pair_id: crypto_id,
+            price: "0.055",
+            quantity: "10",
+            ref_id: uuidv4(),
+            side: "buy",
+            time_in_force: "gtc",
+            type: "market",
+        })).data
+    }
+    catch(e){
+        console.log(e.response.data)
+    }
+
+
+    return res
 
 }
 
 module.exports = {
-    auth,
-    quote
+    client,
+    quote,
+    crypto,
+    sell,
+    buy
 }
