@@ -203,25 +203,33 @@ class Robinhood {
         var holdings = await this.crypto_holdings()
         var holding = holdings.filter(c=>{return c.currency.code == symbol})[0]
         var quote0 = await this.crypto_quote(symbol)
-        holding.value0 = holding.quantity_available * quote0.mark_price
+        holding.value0 = holding.quantity_available * quote0.bid_price
+        var window = [holding.value0]
         while(true){
-            await utils.sleep(500)
+            await utils.sleep(1000)
             var quote = await this.crypto_quote(symbol)
-            var new_value = holding.quantity_available * quote.mark_price
+            var new_value = holding.quantity_available * quote.bid_price
             quote.delta = new_value - holding.value0
             quote.delta_percent =  (quote.delta /  holding.value0 )*100 
-            quote.date = moment().format()
+
+            window.push(new_value)
+            quote.window_delta = new_value - window[0]
+            quote.window_delta_percent = (quote.window_delta /  window[0] )*100 
+            if(window.length > 20){
+                quote.half_window_delta_percent = ((new_value - window[9])/window[9])*100 
+                window.shift()
+            }
             yield quote
         }
     }
 
 
     async order(params){
-        var robinhood = await client()
         var crypto_id = this.currency_pairs.filter(c=>{return c.asset_currency.code == params.symbol})[0].id
+        var account_id = this.account.id
         try{
-            var res =( await robinhood.nummus.post('orders/',{
-                account_id: robinhood.account.id,
+            var res =( await this.client.nummus.post('orders/',{
+                account_id: account_id,
                 currency_pair_id: crypto_id,
                 price: params.price.toString(),
                 quantity: params.quantity.toString(),
