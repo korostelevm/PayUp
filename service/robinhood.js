@@ -131,6 +131,30 @@ class Robinhood {
     }
 
 
+    async track_order(order,timeout){
+        return new Promise(async (resolve,reject)=>{
+            var done = false;
+            var tries = 0
+            do{
+                var status =( await this.client.nummus.get(`orders/${order.id}/`)).data
+                if(['filled','canceled'].includes(status.state) ){
+                    console.log(status.state)
+                    done = status
+                }else if(tries >=timeout){
+                    console.log('Timed out, cancelling order')
+                    done = ( await this.client.nummus.post(`orders/${order.id}/cancel/`)).data
+                    await this.track_order(order,60)
+                }else{
+                    tries+=1
+                    console.log('waiting',status.state, tries)
+                    await utils.sleep(1000)
+                }
+            }while(!done)
+            return resolve(done)
+
+        })
+    }
+
     async order(params){
         var crypto = this.currency_pairs.filter(c=>{return c.asset_currency.code == params.symbol})[0]
         var account_id = this.account.id
@@ -152,19 +176,19 @@ class Robinhood {
         catch(e){
             console.log(e.config)
             console.log(e.response.data)
+            // if(e.response.data.quantity && e.response.data.quantity == ['Order quantity is too small.']){
+            // }
+            console.log(crypto)
             return false
         }
         return res
     }
+
+
   }
 
 
 
 module.exports = {
-    client,
-    quote_stock,
-    quote_crypto,
-    sell,
-    buy,
     Robinhood
 }
