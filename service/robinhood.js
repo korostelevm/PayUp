@@ -20,7 +20,6 @@ class Robinhood {
     async init(){
         try {
             var res = await axios({
-                // httpsAgent: agent,
                 method: 'post',
                 url: `https://api.robinhood.com/oauth2/token/`,
                 data: {
@@ -34,7 +33,18 @@ class Robinhood {
                 },
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                raxConfig: {
+                    retry: 5,
+                    retryDelay: _.random(500),
+                    httpMethodsToRetry: ['GET', 'HEAD', 'OPTIONS', 'DELETE', 'PUT'],
+                    statusCodesToRetry: [[403]],
+                    backoffType: 'exponential',
+                    onRetryAttempt: err => {
+                      const cfg = rax.getConfig(err);
+                      console.log(`Retry attempt #${cfg.currentRetryAttempt}`);
+                    }
+                  }
             })
        
         } catch (e) {
