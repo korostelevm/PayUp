@@ -60,7 +60,6 @@ var run = async function(){
         var  _coin = (await coin.next()).value
         var date = moment().format()
         _coin.date = date
-        _coin.state = 'not_holding'
         if(  _coin.window_delta_percent < -0.1 && !holding){
             var buy = {
                 symbol: coin_symbol,
@@ -81,9 +80,6 @@ var run = async function(){
                 holding = {}
             }
         }
-        if(holding){
-            _coin.state = 'holding'
-        }
         var sell = {
             symbol: coin_symbol,
             price: _coin.bid_price,
@@ -94,6 +90,7 @@ var run = async function(){
 
         var status = {
             ..._coin,
+            state: holding.quantity ? 'holding' : 'not_holding',
             quantity: holding.quantity,
             total: holding.total,
             since_start: _coin.delta_percent.toFixed(8),
@@ -102,7 +99,7 @@ var run = async function(){
             return_percent: ((sell.total - holding.total) / holding.total) * 100
         }
         console.log(status)
-        if( holding && (sell.total - holding.total) > 0.01){
+        if( holding.quantity && (sell.total - holding.total) > 0.01){
             console.log('sell', sell)
             var res = await r.order(sell)
             console.log('made',sell.total - status.total)
