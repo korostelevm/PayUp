@@ -1,0 +1,22 @@
+{
+  "ask_price": "242.580000",
+  "bid_price": "242.400000",
+  "mark_price": "242.490000",
+  "high_price": "251.425000",
+  "low_price": "226.060000",
+  "open_price": "232.855000",
+  "symbol": "BSVUSD",
+  "id": "086a8f9f-6c39-43fa-ac9f-57952f4a1ba6",
+  "volume": "0.000000",
+  "delta": -0.01999999999998181,
+  "delta_percent": -0.008244023083257135,
+  "window_delta": -0.10149966666665614,
+  "window_delta_percent": -0.041819317978927996,
+  "half_window_delta_percent": -0.053561863952863685,
+  "date": "2021-02-21T13:32:18-05:00",
+  "state": "not_holding",
+  "since_start": "-0.00824402",
+  "window": "-0.04181932",
+  "return": null,
+  "return_percent": null
+}

@@ -1,0 +1,22 @@
+{
+  "ask_price": "228.920000",
+  "bid_price": "228.795000",
+  "mark_price": "228.857500",
+  "high_price": "233.210000",
+  "low_price": "219.810000",
+  "open_price": "229.030000",
+  "symbol": "LTCUSD",
+  "id": "383280b1-ff53-43fc-9c84-f01afd0989cd",
+  "volume": "0.000000",
+  "delta": -0.160000000000025,
+  "delta_percent": -0.06984459577441288,
+  "window_delta": -0.0005852380952397933,
+  "window_delta_percent": -0.0002556114382690158,
+  "half_window_delta_percent": 0,
+  "date": "2021-02-21T13:26:25-05:00",
+  "state": "not_holding",
+  "since_start": "-0.06984460",
+  "window": "-0.00025561",
+  "return": null,
+  "return_percent": null
+}
