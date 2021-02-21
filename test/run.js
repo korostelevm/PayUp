@@ -12,8 +12,23 @@ var run = async function(){
     var r = await (new robinhood.Robinhood()).init()
     var coin_symbol = 'DOGE'
     var dollars_buy = 5
-
+    
     var coin = r.watch_crypto(coin_symbol)
+    var keys = Object.keys((await coin.next()).value).map(k=>{
+        return {id: k, title: k}
+    })
+    keys.push({
+        id:'state',title:'state',
+    })
+    keys.push({
+        id:'date',title:'date',
+    })
+    const csvWriter = createCsvWriter({
+        path: path.resolve(__dirname, "./"+coin_symbol+"1.csv"),
+        header: keys,
+        append:true
+    });
+
     
     while(true){
         var  _coin = (await coin.next()).value
@@ -22,7 +37,7 @@ var run = async function(){
         _coin.state = 'not_holding'
         // if(_doge.delta_percent)
         
-        if( _coin.window_delta_percent < -0.8 && !holding){
+        if(  _coin.window_delta_percent < -0.08 && !holding){
             // var quantity = (dollars_buy /_coin.ask_price).toFixed(_coin.ask_price.length)
             var buy = {
                 symbol: coin_symbol,
@@ -64,20 +79,16 @@ var run = async function(){
         if( holding && (sell.total - holding.total) > 0.01){
             console.log('sell', sell)
             var res = await r.order(sell)
+            if(res){
+                console.log('made',sell.total - buy.total)
+                break
+            }
             console.log(res)
-            console.log('made',sell.total - buy.total)
-            break
         }
 
-        records.push(_coin)
     
-        const csvWriter = createCsvWriter({
-            path: path.resolve(__dirname, "./"+coin_symbol+"1.csv"),
-            header: Object.keys(records[0]).map(k=>{
-                return {id: k, title: k}
-            })
-        });
-        await csvWriter.writeRecords(records)
+    
+        await csvWriter.writeRecords([_coin])
     }
     run()
 }
