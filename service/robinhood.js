@@ -117,7 +117,7 @@ class Robinhood {
         holding.value0 = holding.quantity_available * quote0.ask_price
         var window = [holding.value0]
         while(true){
-            await utils.sleep(1000)
+            await utils.sleep(500)
             try{
                 var quote = await this.crypto_quote(symbol)
             }catch(e){
@@ -157,7 +157,7 @@ class Robinhood {
                 }else{
                     tries+=1
                     console.log('waiting',status.state, tries)
-                    await utils.sleep(1000)
+                    await utils.sleep(500)
                 }
             }while(!done)
             return resolve(done)

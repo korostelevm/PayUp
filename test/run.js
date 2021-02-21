@@ -8,37 +8,59 @@ const path = require("path");
 var records = []
 
 var run = async function(){
-    var holding = false;
     var r = await (new robinhood.Robinhood()).init()
     var coin_symbol = 'DOGE'
-    var dollars_buy = 5
+    var dollars_buy = 10
     
     var coin = r.watch_crypto(coin_symbol)
     var keys = Object.keys((await coin.next()).value).map(k=>{
         return {id: k, title: k}
     })
-    keys.push({
-        id:'state',title:'state',
-    })
-    keys.push({
-        id:'date',title:'date',
-    })
-    const csvWriter = createCsvWriter({
-        path: path.resolve(__dirname, "./"+coin_symbol+"1.csv"),
-        header: keys,
-        append:true
-    });
-
+    keys = keys.concat([
+        'since_start',
+        'window',
+        'return',
+        'return_percent',
+        'state',
+        'date'
+    ].map(k=>{return {id:k, title:k}}))
+    var csvWriter;
+    var csv_file =  "./"+coin_symbol+"2.csv"
+    try{
+        var state = fs.readFileSync(path.resolve(__dirname, csv_file))
+        csvWriter = createCsvWriter({
+            path: path.resolve(__dirname, csv_file),
+            header: keys,
+            append:true
+        });
+    }catch(e){
+        if(e.message.includes('no such file or directory')){
+            csvWriter = createCsvWriter({
+                path: path.resolve(__dirname, csv_file),
+                header: keys,
+            });
+        }else{
+            throw(e)
+        }
+    }
     
+    var holding = false;
+    try{
+        var state = JSON.parse(fs.readFileSync(path.resolve(__dirname, "./holding_state.json")))
+        if(state.state == 'holding'){
+            holding = state
+        }
+    }catch(e){
+        if(e.message.includes('no such file or directory')){
+            console.log('No previous state')
+        }else{ throw e }
+    }
     while(true){
         var  _coin = (await coin.next()).value
         var date = moment().format()
         _coin.date = date
         _coin.state = 'not_holding'
-        // if(_doge.delta_percent)
-        
-        if(  _coin.window_delta_percent < -0.08 && !holding){
-            // var quantity = (dollars_buy /_coin.ask_price).toFixed(_coin.ask_price.length)
+        if(  _coin.window_delta_percent < -0.1 && !holding){
             var buy = {
                 symbol: coin_symbol,
                 price: _coin.ask_price,
@@ -49,9 +71,11 @@ var run = async function(){
             console.log('buy',buy)
             var res = await r.order(buy)
             console.log(res)
+            await r.track_order(res,60)
             if(res){
                 holding = buy
-                holding.quantity = res.quantity
+                holding.quantity = +res.quantity
+                holding.total = +((+res.quantity * +res.price).toFixed(2))
             }else{
                 holding = null
             }
@@ -67,28 +91,31 @@ var run = async function(){
             total: holding.quantity * _coin.bid_price
         }
 
-        console.log(
-            {
-                ..._coin,
-                since_start: _coin.delta_percent.toFixed(8),
-                window: _coin.window_delta_percent.toFixed(8),
-                return: sell.total - holding.total,
-                return_percent: ((sell.total - holding.total) / holding.total) * 100
-            }
-             )
+        var status = {
+            ..._coin,
+            quantity: holding.quantity,
+            total: holding.total,
+            since_start: _coin.delta_percent.toFixed(8),
+            window: _coin.window_delta_percent.toFixed(8),
+            return: sell.total - holding.total,
+            return_percent: ((sell.total - holding.total) / holding.total) * 100
+        }
+        console.log(status)
         if( holding && (sell.total - holding.total) > 0.01){
             console.log('sell', sell)
             var res = await r.order(sell)
+            console.log('made',sell.total - status.total)
+            await r.track_order(res,60)
             if(res){
-                console.log('made',sell.total - buy.total)
+                fs.writeFileSync(path.resolve(__dirname, "./holding_state.json"), JSON.stringify(status, null, 2))
                 break
             }
             console.log(res)
         }
-
+        
+        fs.writeFileSync(path.resolve(__dirname, "./holding_state.json"), JSON.stringify(status, null, 2))
     
-    
-        await csvWriter.writeRecords([_coin])
+        await csvWriter.writeRecords([status])
     }
     run()
 }
