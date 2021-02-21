@@ -10,7 +10,7 @@ var records = []
 var run = async function(){
     var holding = false;
     var r = await (new robinhood.Robinhood()).init()
-    var coin_symbol = 'BTC'
+    var coin_symbol = 'DOGE'
     var dollars_buy = 5
 
     var coin = r.watch_crypto(coin_symbol)
@@ -22,24 +22,28 @@ var run = async function(){
         _coin.state = 'not_holding'
         // if(_doge.delta_percent)
         
-        if(_coin.window_delta_percent < -0.0000 && !holding){
-            var quantity = (dollars_buy /_coin.ask_price).toFixed(8)
+        if( _coin.window_delta_percent < -0.8 && !holding){
+            // var quantity = (dollars_buy /_coin.ask_price).toFixed(_coin.ask_price.length)
             var buy = {
                 symbol: coin_symbol,
                 price: _coin.ask_price,
-                quantity: quantity ,
+                quantity: dollars_buy/_coin.ask_price,
                 side:'buy',
-                total: quantity * _coin.ask_price
+                total: dollars_buy
             }
             console.log('buy',buy)
             var res = await r.order(buy)
             console.log(res)
-            _coin.state = 'holding'
             if(res){
                 holding = buy
+                holding.quantity = res.quantity
+            }else{
+                holding = null
             }
         }
-        
+        if(holding){
+            _coin.state = 'holding'
+        }
         var sell = {
             symbol: coin_symbol,
             price: _coin.bid_price,
@@ -50,13 +54,14 @@ var run = async function(){
 
         console.log(
             {
+                ..._coin,
                 since_start: _coin.delta_percent.toFixed(8),
                 window: _coin.window_delta_percent.toFixed(8),
                 return: sell.total - holding.total,
                 return_percent: ((sell.total - holding.total) / holding.total) * 100
             }
              )
-        if(holding && (sell.total - holding.total) > 0.01){
+        if( holding && (sell.total - holding.total) > 0.01){
             console.log('sell', sell)
             var res = await r.order(sell)
             console.log(res)
@@ -67,7 +72,7 @@ var run = async function(){
         records.push(_coin)
     
         const csvWriter = createCsvWriter({
-            path: path.resolve(__dirname, "./res.csv"),
+            path: path.resolve(__dirname, "./"+coin_symbol+"1.csv"),
             header: Object.keys(records[0]).map(k=>{
                 return {id: k, title: k}
             })

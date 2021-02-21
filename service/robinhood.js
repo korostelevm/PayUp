@@ -177,6 +177,7 @@ class Robinhood {
         this.account = (await nummus.get(`accounts/`)).data.results[0]
         this.client = {api,nummus}
         this.currency_pairs = (await axios.get('https://nummus.robinhood.com/currency_pairs/')).data.results
+        // console.log(this.currency_pairs)
         return this
     }
 
@@ -200,6 +201,7 @@ class Robinhood {
 
     
     async *watch_crypto(symbol){
+        await utils.sleep(1000)
         var holdings = await this.crypto_holdings()
         var holding = holdings.filter(c=>{return c.currency.code == symbol})[0]
         var quote0 = await this.crypto_quote(symbol)
@@ -225,14 +227,17 @@ class Robinhood {
 
 
     async order(params){
-        var crypto_id = this.currency_pairs.filter(c=>{return c.asset_currency.code == params.symbol})[0].id
+        var crypto = this.currency_pairs.filter(c=>{return c.asset_currency.code == params.symbol})[0]
         var account_id = this.account.id
+        var price = Math.round (params.price * (1/crypto.min_order_price_increment)) / (1/crypto.min_order_price_increment)
+        var quantity = Math.round (params.quantity * (1/crypto.min_order_quantity_increment)) / (1/crypto.min_order_quantity_increment)
+        console.log(quantity)
         try{
             var res =( await this.client.nummus.post('orders/',{
                 account_id: account_id,
-                currency_pair_id: crypto_id,
-                price: params.price.toString(),
-                quantity: params.quantity.toString(),
+                currency_pair_id: crypto.id,
+                price: price.toString(),
+                quantity: quantity.toString(),
                 ref_id: uuidv4(),
                 side: params.side,
                 time_in_force: "gtc",
@@ -240,7 +245,9 @@ class Robinhood {
             })).data
         }
         catch(e){
+            console.log(e.config)
             console.log(e.response.data)
+            throw e
         }
         return res
     }
