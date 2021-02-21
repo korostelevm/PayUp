@@ -2,6 +2,7 @@ require('./env').set_auth()
 const moment = require('moment');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 var robinhood = require('../service/robinhood')
+var utils = require('../service/utils')
 var _ = require('lodash')
 var fs = require('fs')
 const path = require("path");
@@ -9,7 +10,7 @@ var records = []
 
 var run = async function(){
     var r = await (new robinhood.Robinhood()).init()
-    var coin_symbol = 'DOGE'
+    var coin_symbol = 'ETC'
     var dollars_buy = 10
     
     var coin = r.watch_crypto(coin_symbol)
@@ -46,7 +47,7 @@ var run = async function(){
     
     var holding = false;
     try{
-        var state = JSON.parse(fs.readFileSync(path.resolve(__dirname, "./holding_state.json")))
+        var state = JSON.parse(fs.readFileSync(path.resolve(__dirname, `./holding_state${coin_symbol}.json`)))
         if(state.state == 'holding'){
             holding = state
         }
@@ -71,8 +72,8 @@ var run = async function(){
             console.log('buy',buy)
             var res = await r.order(buy)
             console.log(res)
-            await r.track_order(res,60)
-            if(res){
+            var tracker = await r.track_order(res,60)
+            if(res && tracker.state != 'canceled'){
                 holding = buy
                 holding.quantity = +res.quantity
                 holding.total = +((+res.quantity * +res.price).toFixed(2))
@@ -105,18 +106,23 @@ var run = async function(){
             console.log('sell', sell)
             var res = await r.order(sell)
             console.log('made',sell.total - status.total)
-            await r.track_order(res,60)
+            var tracker = await r.track_order(res,60)
+            if(tracker.state == 'filled'){
+                _coin.state = 'not_holding'
+                status.state = 'not_holding'
+            }
             if(res){
-                fs.writeFileSync(path.resolve(__dirname, "./holding_state.json"), JSON.stringify(status, null, 2))
+                fs.writeFileSync(path.resolve(__dirname, `./holding_state${coin_symbol}.json`), JSON.stringify(status, null, 2))
                 break
             }
             console.log(res)
         }
         
-        fs.writeFileSync(path.resolve(__dirname, "./holding_state.json"), JSON.stringify(status, null, 2))
+        fs.writeFileSync(path.resolve(__dirname, `./holding_state${coin_symbol}.json`), JSON.stringify(status, null, 2))
     
         await csvWriter.writeRecords([status])
     }
+    await utils.sleep(15000)
     run()
 }
 

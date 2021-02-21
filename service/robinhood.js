@@ -157,7 +157,7 @@ class Robinhood {
                 }else{
                     tries+=1
                     console.log('waiting',status.state, tries)
-                    await utils.sleep(500)
+                    await utils.sleep(2000)
                 }
             }while(!done)
             return resolve(done)
