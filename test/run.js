@@ -72,13 +72,13 @@ var run = async function(){
             console.log('buy',buy)
             var res = await r.order(buy)
             console.log(res)
-            var tracker = await r.track_order(res,60)
-            if(res && tracker.state != 'canceled'){
+            var tracker = await r.track_order(res,180)
+            if(res && tracker.state == 'filled'){
                 holding = buy
                 holding.quantity = +res.quantity
                 holding.total = +((+res.quantity * +res.price).toFixed(2))
             }else{
-                holding = null
+                holding = {}
             }
         }
         if(holding){
@@ -106,7 +106,7 @@ var run = async function(){
             console.log('sell', sell)
             var res = await r.order(sell)
             console.log('made',sell.total - status.total)
-            var tracker = await r.track_order(res,60)
+            var tracker = await r.track_order(res,180)
             if(tracker.state == 'filled'){
                 _coin.state = 'not_holding'
                 status.state = 'not_holding'
